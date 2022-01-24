@@ -74,11 +74,12 @@ class ESPSLIP {
 
   [[nodiscard]] Result decode_packet(auto t_buffer, std::size_t t_byte_read) const {
     auto const vec = [=]() {
-      auto packet_start = boost::next(std::find_if(t_buffer, t_buffer + t_byte_read, is_slip_end));
+      auto packet_start = boost::next(std::find_if(t_buffer, boost::next(t_buffer, t_byte_read), is_slip_end));
       std::vector<std::uint32_t> ret;  // prevent std::uint8_t overflow during arithmetic
       ret.reserve(t_byte_read);
       for (std::uint8_t prev = 0, curr = static_cast<std::uint8_t>(*packet_start);
-           packet_start != t_buffer + t_byte_read; prev = curr, curr = static_cast<std::uint8_t>(*++packet_start)) {
+           packet_start != boost::next(t_buffer, t_byte_read);
+           prev = curr, curr = static_cast<std::uint8_t>(*++packet_start)) {
         if (curr == SLIP_ESC) {
           continue;
         } else if (curr == SLIP_ESC_END and prev == SLIP_ESC) {

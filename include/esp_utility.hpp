@@ -31,7 +31,7 @@ inline void print_byte_stream(auto t_begin, auto t_end) noexcept {
   using std::ranges::subrange;
   using std::views::transform;
   auto const byte_stream_size = t_end - t_begin;
-  auto const size_to_print    = static_cast<std::size_t>(std::ceil(byte_stream_size / 16.0));
+  auto const size_to_print    = static_cast<std::size_t>((byte_stream_size + 15) / 16);  // ceil
   spdlog::set_pattern("%v");
 
   for (std::size_t i = 0; i < size_to_print; ++i) {

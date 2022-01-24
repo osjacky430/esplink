@@ -2,6 +2,8 @@
 
 namespace esputil {
 
+static constexpr auto ESP_MAGIC_NUMBER = 0xE9;
+
 enum class ChipID : std::uint32_t {
   Unknown       = 0,
   ESP8266       = 0xFFF0'C101U,

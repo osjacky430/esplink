@@ -32,7 +32,19 @@ class Serial : PacketProtocol {
     assert(ret == 0);
   }
 
-  void reset() {
+  void hard_reset() noexcept {
+    using namespace std::chrono_literals;
+    boost::asio::high_resolution_timer sleep_timer(this->port_.get_executor());
+    auto const& native_handle = this->port_.lowest_layer().native_handle();  //
+
+    this->set_dtr(native_handle, Set::High);
+    this->set_rts(native_handle, Set::Low);
+    sleep_timer.expires_from_now(100ms);
+    sleep_timer.wait();
+    this->set_rts(native_handle, Set::High);
+  }
+
+  void reset() noexcept {
     using namespace std::chrono_literals;
     boost::asio::high_resolution_timer sleep_timer(this->port_.get_executor());
     auto const& native_handle = this->port_.lowest_layer().native_handle();
@@ -130,6 +142,8 @@ class Serial : PacketProtocol {
     throw std::runtime_error(fmt::format("{}: Read failed after retrying for {} times",  //
                                          t_data.command_name(), retried));
   }
+
+  ~Serial() { this->hard_reset(); }
 };
 
 template <typename P>

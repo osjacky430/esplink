@@ -33,7 +33,7 @@ std::istream& operator>>(std::istream& t_in, CommandLineOption& t_opt) {
 
 template <esputil::BinImgChipID ChipID>
 void do_flash(std::filesystem::path const& t_file, std::string_view const t_port, std::uint32_t const t_baud,
-              std::uint32_t t_flash_offset) {
+              std::uint32_t const t_flash_offset) {
   if (t_file.extension() == "elf") {
     throw std::invalid_argument("elf file is not supported, currently support only .bin file");
   }
@@ -47,7 +47,14 @@ void do_flash(std::filesystem::path const& t_file, std::string_view const t_port
 
   loader.transceive(esputil::command::SPI_ATTACH());
   loader.transceive(esputil::command::SPI_SET_PARAMS<>());
-  loader.transceive(esputil::command::FLASH_READ_SLOW(0, 16), 0, 2000ms);
+  auto const flash_read = loader.transceive(esputil::command::FLASH_READ_SLOW(0, 16), 0, 2000ms);
+
+  [[maybe_unused]] auto const magic_number = flash_read.data_[0];
+  assert(magic_number == esputil::ESP_MAGIC_NUMBER);
+  auto const spi_mode        = flash_read.data_[2];
+  auto const spi_speed       = static_cast<std::uint8_t>(flash_read.data_[3] >> 4U);
+  auto const flash_chip_size = static_cast<std::uint8_t>(flash_read.data_[3] & 0xF);
+  spdlog::info("Using flash mode: {}, flash speed: {}, flash chip size: {}", spi_mode, spi_speed, flash_chip_size);
 
   std::ifstream file(t_file.string(), std::ios::binary | std::ios::in);
   auto const fstart = file.tellg();
@@ -66,7 +73,7 @@ void do_flash(std::filesystem::path const& t_file, std::string_view const t_port
     file.read(buff.data(), BLOCK_SIZE);
     auto const byte_read = static_cast<std::uint32_t>(file.gcount());
     if (sequence == 0) {
-      esputil::set_binary_header<ChipID>(buff, 0, 0, 0);
+      esputil::set_binary_header<ChipID>(buff, spi_mode, spi_speed, flash_chip_size);
     }
 
     loader.transceive(esputil::command::FLASH_DATA<BLOCK_SIZE>(byte_read, sequence, buff), 1, 1500ms);
@@ -75,7 +82,8 @@ void do_flash(std::filesystem::path const& t_file, std::string_view const t_port
   loader.transceive(esputil::command::FLASH_END<esputil::command::FlashEndOption::Reboot>());
 }
 
-using FlashFn = void (*)(std::filesystem::path const&, std::string_view const, std::uint32_t const, std::uint32_t);
+using FlashFn = void (*)(std::filesystem::path const&, std::string_view const, std::uint32_t const,
+                         std::uint32_t const);
 
 std::unordered_map<std::string_view, FlashFn> const FLASH_FN_MAP = []() {
   std::unordered_map<std::string_view, FlashFn> ret_val;
@@ -90,6 +98,8 @@ int main(int argc, const char** argv) {
     ("port", value<std::string>(), "Port of connected ESP MCU")                     //
     ("baud", value<int>()->default_value(115200), "Baudrate of the communication")  //
     ("offset", value<std::string>(), "Flash offset")                                //
+    ("flash-param", value<std::string>(),
+     "Flash parameter, including SPI flash mode, SPI flash speed, and flash chip size")  //
     ("chip", value<std::string>()->default_value("esp32c3"), "Chip type, currently support only esp32c3");
 
   CommandLineOption opt = CommandLineOption::NoOpt;
