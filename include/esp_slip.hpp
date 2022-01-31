@@ -8,7 +8,6 @@
 #include <algorithm>
 #include <chrono>
 #include <iterator>
-#include <ranges>
 #include <vector>
 
 #include "esp_utility.hpp"
@@ -180,9 +179,6 @@ class ESPSLIP {
    * @return auto
    */
   auto complete_condition(iterator const t_begin, iterator const t_end) {
-    using std::ranges::subrange;
-    using std::views::transform;
-
     auto const read_size = t_end - t_begin;
     if (read_size != 0) {
       spdlog::debug("Received: \n");
