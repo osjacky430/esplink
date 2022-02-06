@@ -1,4 +1,4 @@
-# esputil <!-- omit in toc -->
+# esplink <!-- omit in toc -->
 
 A self learning project that tries to flash code to esp chips without any dependency of esp-idf, esptool, etc.
 
@@ -6,15 +6,57 @@ A self learning project that tries to flash code to esp chips without any depend
 - [Table of Contents](#table-of-contents)
 - [Disclaimer](#disclaimer)
 - [Flashing ESP32](#flashing-esp32)
+- [Make esp32 binary image from elf file](#make-esp32-binary-image-from-elf-file)
 - [Reference](#reference)
 
 # Disclaimer
 
-This is only for self learning purpose, currently only support flashing esp32c3 chips (not even sure if it succeeded or not). The only thing that I'm sure is the chip doesn't report any error.
+This is only for self learning purpose, currently only support esp32c3 chips.
 
 # Flashing ESP32
 
-There are several ways to flash code to esp32, one of them is via UART. For `ESP32-C3-DevKitM`, there is a USB-UART bridge (`CP2102N-A02-GQFN28`) on it, which means that all one needs to flash code to `ESP32-C3-DevKitM` is a micro usb cable.
+```
+./esp-flash --help
+
+All options:
+  --help                 Show this help message and exit
+  --verbose              Show debug message during execution
+
+Parameter for flash:
+  --port arg             Port of connected ESP MCU
+  --baud arg (=115200)   Baudrate of the communication
+  --offset arg           Flash offset
+  --flash-param arg      Flash parameter, including SPI flash mode, SPI flash 
+                         speed, and flash chip size
+  --chip arg (=esp32c3)  Chip type, currently support only esp32c3
+```
+
+Example:
+
+```
+./esp-flash flash main.bin --port /dev/ttyUSB0 --offset 0
+```
+
+# Make esp32 binary image from elf file
+
+```
+./esp-mkbin --help
+
+Parameter for mkbin:
+  --verbose             Show debug message during execution
+  --file arg            elf file to make binary
+  --output arg          output file name
+  --chip arg            chip name, possible value: ESP32, ESP32S2, ESP32C3, 
+                        ESP32S3, ESP32C2
+  --help                Show this help message and exit
+  --flash-param arg     flash param
+```
+
+Example: 
+
+```
+./esp-mkbin --file main.elf --output main.bin --chip ESP32C3
+```
 
 # Reference
 

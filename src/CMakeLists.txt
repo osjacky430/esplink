@@ -4,3 +4,9 @@ target_link_libraries(esp-flash PUBLIC Boost::program_options Boost::system spdl
 target_compile_options(esp-flash PUBLIC -B${CMAKE_LINKER})
 
 install(TARGETS esp-flash)
+
+add_executable(esp-mkbin esp_mkbin.cpp)
+target_link_libraries(esp-mkbin PUBLIC Boost::program_options spdlog::spdlog fmt::fmt range-v3::range-v3 project_options project_warnings)
+target_include_directories(esp-mkbin PUBLIC ${PROJECT_SOURCE_DIR}/include)
+
+install(TARGETS esp-mkbin)
