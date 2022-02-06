@@ -10,9 +10,9 @@
 #include <iterator>
 #include <vector>
 
-#include "esp_utility.hpp"
+#include "esp_common/utility.hpp"
 
-namespace esputil {
+namespace esplink {
 
 class ESPSLIP {
  private:
@@ -208,4 +208,4 @@ class ESPSLIP {
   }
 };
 
-}  // namespace esputil
+}  // namespace esplink

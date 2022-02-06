@@ -1,6 +1,8 @@
 #pragma once
 
-namespace esputil {
+#include "esp_common/constants.hpp"
+
+namespace esplink {
 
 static constexpr auto ESP_MAGIC_NUMBER = 0xE9;
 
@@ -25,11 +27,7 @@ inline auto get_chip_info(std::uint32_t const t_chip_id) noexcept {
   return std::pair{ChipID::Unknown, "Unknown"};
 }
 
-enum class BinImgChipID {
-  ESP32C3 = 5,
-};
-
-template <BinImgChipID ChipID>
+template <ImageHeaderChipID ChipID>
 inline void set_binary_header(auto& t_buffer, std::uint8_t t_flash_mode, std::uint8_t t_flash_size,
                               std::uint8_t t_flash_freq) noexcept {
   using value_type = std::remove_reference_t<decltype(t_buffer)>::value_type;
@@ -38,4 +36,4 @@ inline void set_binary_header(auto& t_buffer, std::uint8_t t_flash_mode, std::ui
   t_buffer[12]     = to_underlying(ChipID);
 }
 
-}  // namespace esputil
+}  // namespace esplink

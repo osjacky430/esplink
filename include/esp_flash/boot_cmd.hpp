@@ -6,9 +6,9 @@
 #include <numeric>
 #include <string_view>
 
-#include "esp_utility.hpp"
+#include "esp_common/utility.hpp"
 
-namespace esputil::command {
+namespace esplink::command {
 
 class SYNC {
  public:
@@ -196,4 +196,4 @@ struct FLASH_READ_SLOW {
   }
 };
 
-}  // namespace esputil::command
+}  // namespace esplink::command

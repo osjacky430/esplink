@@ -11,7 +11,7 @@ macro (run_conan)
     add_link_options(-stdlib=libc++)
   endif ()
 
-  conan_cmake_configure(REQUIRES spdlog/1.9.2 fmt/8.1.1 boost/1.76.0 gtest/1.11.0 GENERATORS cmake_find_package)
+  conan_cmake_configure(REQUIRES spdlog/1.9.2 fmt/8.1.1 boost/1.78.0 gtest/1.11.0 range-v3/0.11.0 GENERATORS cmake_find_package)
 
   conan_cmake_autodetect(settings BUILD_TYPE Release)
   conan_cmake_install(PATH_OR_REFERENCE . BUILD missing SETTINGS ${settings})

@@ -10,9 +10,9 @@
 #include <fmt/ranges.h>
 #include <spdlog/spdlog.h>
 
-#include "esp_utility.hpp"
+#include "esp_common/utility.hpp"
 
-namespace esputil {
+namespace esplink {
 
 template <typename P>
 struct MatchCondition;
@@ -153,7 +153,7 @@ struct MatchCondition {
   auto operator()(auto t_begin, auto t_end) { return this->port_->complete_condition(t_begin, t_end); }
 };
 
-}  // namespace esputil
+}  // namespace esplink
 
 template <typename P>
-struct boost::asio::is_match_condition<esputil::MatchCondition<P>> : boost::true_type {};
+struct boost::asio::is_match_condition<esplink::MatchCondition<P>> : boost::true_type {};
