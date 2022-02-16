@@ -1,9 +1,8 @@
 #pragma once
 
+#include "esp_common/constants.hpp"
 #include <array>
 #include <cstdint>
-
-#include "esp_common/constants.hpp"
 
 namespace esplink {
 

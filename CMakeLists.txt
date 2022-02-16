@@ -27,3 +27,11 @@ add_library(project_warnings INTERFACE)
 set_project_warnings(project_warnings)
 
 add_subdirectory(src)
+
+if (${ENABLE_TESTING})
+  include(FetchContent)
+  FetchContent_Declare(Catch2 GIT_REPOSITORY https://github.com/catchorg/Catch2.git GIT_TAG v3.0.0-preview3)
+  FetchContent_MakeAvailable(Catch2)
+
+  add_subdirectory(test)
+endif ()

@@ -1,6 +1,9 @@
 #pragma once
 
 #include "esp_common/constants.hpp"
+#include "esp_common/utility.hpp"
+#include <algorithm>
+#include <array>
 
 namespace esplink {
 
@@ -19,7 +22,7 @@ inline auto get_chip_info(std::uint32_t const t_chip_id) noexcept {
   };
 
   auto const chip_matched = [=](auto t_entry) { return to_underlying(t_entry.first) == t_chip_id; };
-  if (auto const result = std::find_if(chip_info_table.begin(), chip_info_table.end(), chip_matched);
+  if (const auto* const result = std::find_if(chip_info_table.begin(), chip_info_table.end(), chip_matched);
       result != chip_info_table.end()) {
     return *result;
   }
@@ -30,9 +33,9 @@ inline auto get_chip_info(std::uint32_t const t_chip_id) noexcept {
 template <ImageHeaderChipID ChipID>
 inline void set_binary_header(auto& t_buffer, std::uint8_t t_flash_mode, std::uint8_t t_flash_size,
                               std::uint8_t t_flash_freq) noexcept {
-  using value_type = std::remove_reference_t<decltype(t_buffer)>::value_type;
+  using value_type = typename std::remove_reference_t<decltype(t_buffer)>::value_type;
   t_buffer[2]      = static_cast<value_type>(t_flash_mode);
-  t_buffer[3]      = static_cast<value_type>((t_flash_size << 4) | (t_flash_freq & 0b1111));
+  t_buffer[3]      = static_cast<value_type>((t_flash_size << 4U) | (t_flash_freq & 0b1111));
   t_buffer[12]     = to_underlying(ChipID);
 }
 

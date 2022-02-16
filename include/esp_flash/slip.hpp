@@ -1,13 +1,14 @@
 #pragma once
 
+#include <algorithm>
 #include <boost/asio.hpp>
 #include <boost/asio/high_resolution_timer.hpp>
-#include <fmt/ranges.h>
-#include <spdlog/spdlog.h>
-
-#include <algorithm>
+#include <boost/next_prior.hpp>
 #include <chrono>
+#include <fmt/ranges.h>
 #include <iterator>
+#include <range/v3/algorithm/for_each.hpp>
+#include <spdlog/spdlog.h>
 #include <vector>
 
 #include "esp_common/utility.hpp"
@@ -81,7 +82,9 @@ class ESPSLIP {
            prev = curr, curr = static_cast<std::uint8_t>(*++packet_start)) {
         if (curr == SLIP_ESC) {
           continue;
-        } else if (curr == SLIP_ESC_END and prev == SLIP_ESC) {
+        }
+
+        if (curr == SLIP_ESC_END and prev == SLIP_ESC) {
           ret.push_back(SLIP_END);
         } else if (curr == SLIP_ESC_ESC and prev == SLIP_ESC) {
           ret.push_back(SLIP_ESC);
@@ -119,31 +122,13 @@ class ESPSLIP {
     return resp;
   }
 
-  auto generate_packet(auto&& t_cmd) {
-    auto data_content = t_cmd();
+  [[nodiscard]] auto generate_packet(auto&& t_cmd) {
+    auto const data_content = t_cmd();
 
-    auto const size_of_data = std::size(data_content);
-    auto packet             = std::vector<std::uint8_t>{
-      SLIP_END,
-      REQUEST_DIRECTION,
-      t_cmd.command_byte(),
-      static_cast<std::uint8_t>(size_of_data & 0xFF),
-      static_cast<std::uint8_t>(size_of_data >> 8),
-    };
-    packet.reserve(size_of_data + SLIP_HEADER_SIZE + 2);  // 2: initial END and end END
-
-    std::uint32_t const check_sum = [&]() {
-      if constexpr (requires { t_cmd.check_sum(); }) {
-        return t_cmd.check_sum();
-      }
-
-      return std::uint8_t{0};
-    }();
-    auto check_sum_arr = word_to_byte_array(check_sum);
-    packet.insert(packet.end(), std::make_move_iterator(check_sum_arr.begin()),
-                  std::make_move_iterator(check_sum_arr.end()));
-    for (auto byte : data_content) {
-      switch (byte) {
+    auto const size_of_data = static_cast<std::uint16_t>(std::size(data_content));
+    auto packet             = std::vector<std::uint8_t>{SLIP_END, REQUEST_DIRECTION, t_cmd.COMMAND_BYTE};
+    auto insert_byte        = [&packet](auto const t_byte) mutable {
+      switch (t_byte) {
         case SLIP_END:
           packet.push_back(SLIP_ESC);
           packet.push_back(SLIP_ESC_END);
@@ -157,10 +142,23 @@ class ESPSLIP {
         case SLIP_ESC_ESC:
           [[fallthrough]];
         default:
-          packet.push_back(byte);
+          packet.push_back(t_byte);
           break;
       }
-    }
+    };
+
+    packet.reserve(size_of_data + SLIP_HEADER_SIZE + 2);  // 2: initial END and end END
+    ranges::for_each(std::bit_cast<std::array<std::uint8_t, 2>>(size_of_data), insert_byte);
+
+    std::uint32_t const check_sum = [&]() {
+      if constexpr (requires { t_cmd.check_sum(); }) {
+        return t_cmd.check_sum();
+      }
+
+      return std::uint8_t{0};
+    }();
+    ranges::for_each(std::bit_cast<std::array<std::uint8_t, 4>>(check_sum), insert_byte);
+    ranges::for_each(data_content, insert_byte);
 
     packet.push_back(SLIP_END);
     return packet;

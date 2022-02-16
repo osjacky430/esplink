@@ -10,12 +10,30 @@
       "name": "default",
       "binaryDir": "build",
       "generator": "Ninja"
+    },
+    {
+      "name": "test",
+      "inherits": "default",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "ENABLE_TESTING": "TRUE"
+      }
     }
   ],
   "buildPresets": [
     {
       "name": "default",
       "configurePreset": "default"
+    },
+    {
+      "name": "test",
+      "configurePreset": "test"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "test",
+      "configurePreset": "test"
     }
   ]
 }

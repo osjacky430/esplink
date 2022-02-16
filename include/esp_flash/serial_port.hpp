@@ -81,7 +81,12 @@ class Serial : PacketProtocol {
  public:
   using TransceiveResult = typename PacketProtocol::Result;
 
-  Serial(std::string_view const t_port, std::uint32_t const t_baud = 115200) : port_{service_, t_port.data()} {
+  Serial(Serial const& t_ser) noexcept = default;
+  Serial(Serial&& t_ser) noexcept      = default;
+  Serial& operator=(Serial const& t_ser) noexcept = default;
+  Serial& operator=(Serial&& t_ser) noexcept = default;
+
+  explicit Serial(std::string_view const t_port, std::uint32_t const t_baud = 115200) : port_{service_, t_port.data()} {
     spdlog::info("Connection Success: {}, baudrate: {}", t_port, t_baud);
     this->reset();
     this->flush_io();
@@ -89,7 +94,7 @@ class Serial : PacketProtocol {
 
     using boost::asio::serial_port_base;
     this->port_.set_option(serial_port_base::baud_rate(t_baud));
-    this->port_.set_option(serial_port_base::character_size(8));
+    this->port_.set_option(serial_port_base::character_size());
     this->port_.set_option(serial_port_base::parity{serial_port_base::parity::none});
     this->port_.set_option(serial_port_base::flow_control{serial_port_base::flow_control::none});
     spdlog::info("Setting serial port options: {} bps, 8 bits, parity: none, flow_control: none", t_baud);
@@ -103,7 +108,7 @@ class Serial : PacketProtocol {
 
       auto const packet       = this->generate_packet(t_data);
       auto const byte_written = boost::asio::write(this->port_, boost::asio::buffer(packet));
-      spdlog::info("Sending Packet: {}", t_data.command_name());
+      spdlog::info("Sending Packet: {} ({:x})", t_data.NAME, t_data.COMMAND_BYTE);
       spdlog::debug("Packet content: ({} byte)\n", byte_written);
       print_byte_stream(packet.begin(), packet.end());
 
@@ -135,12 +140,12 @@ class Serial : PacketProtocol {
       try {
         return this->decode_packet(boost::asio::buffers_begin(input_buffer.data()), byte_read);
       } catch (std::exception& t_e) {
-        throw std::runtime_error(fmt::format("{}: {}", t_data.command_name(), t_e.what()));
+        throw std::runtime_error(fmt::format("{}: {}", t_data.NAME, t_e.what()));
       }
     } while (t_retry-- != 0);
 
     throw std::runtime_error(fmt::format("{}: Read failed after retrying for {} times",  //
-                                         t_data.command_name(), retried));
+                                         t_data.NAME, retried));
   }
 
   ~Serial() { this->hard_reset(); }
