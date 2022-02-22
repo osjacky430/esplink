@@ -66,6 +66,10 @@ void print_elf_info(esplink::Identity const& t_ident, auto const& t_info) {
 void mk_bin_from_elf(std::string_view t_file, std::string_view t_output_name,
                      esplink::ImageHeaderChipID const t_chip_id) {
   std::fstream file_handle{t_file.data(), std::ios::in | std::ios::binary};
+  if (not std::filesystem::is_regular_file(t_file) or std::filesystem::path(t_file).extension() != ".elf") {
+    throw std::invalid_argument("Invalid --file option");
+  }
+
   esplink::ELFFile elf{file_handle};
   auto const& ident   = elf.identity_;
   auto const x86_info = std::get<0>(elf.content_);
@@ -102,8 +106,8 @@ void mk_bin_from_elf(std::string_view t_file, std::string_view t_output_name,
     .chip_id_       = esplink::to_underlying(t_chip_id),
   };
 
-  std::uint8_t check_sum     = esplink::ESP32_CHECKSUM_MAGIC;
-  auto write_loadable_to_bin = [&file_handle, &output_file_handle, &check_sum](auto const& t_sh) mutable {
+  std::uint8_t check_sum           = esplink::ESP32_CHECKSUM_MAGIC;
+  auto const write_loadable_to_bin = [&file_handle, &output_file_handle, &check_sum](auto const& t_sh) {
     // spdlog::debug("writing: {:x}, size: {:x}", t_sh.addr_, t_sh.size_);
     auto const& [name, section] = t_sh;
     auto const padded_length    = esplink::padded_size(section.size_, sizeof(std::uint32_t));
