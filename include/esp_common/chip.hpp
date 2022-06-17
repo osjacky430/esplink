@@ -1,7 +1,7 @@
 #pragma once
 
-#include "esp_common/constants.hpp"
-#include "esp_common/utility.hpp"
+#include "constants.hpp"
+#include "utility.hpp"
 #include <algorithm>
 #include <array>
 

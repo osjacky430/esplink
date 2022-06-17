@@ -3,12 +3,11 @@
 #include "esp_common/constants.hpp"
 #include "esp_common/utility.hpp"
 #include <algorithm>
+#include <array>
 #include <bit>
 #include <cstddef>
 #include <fmt/ranges.h>
 #include <fstream>
-#include <ios>
-#include <iterator>
 #include <range/v3/algorithm/count_if.hpp>
 #include <range/v3/algorithm/find_if.hpp>
 #include <range/v3/algorithm/for_each.hpp>
@@ -252,6 +251,29 @@ static_assert(sizeof(ProgramHeader<Format::x86>) == X86_PROGRAM_HEADER_SIZE);
 static_assert(sizeof(ProgramHeader<Format::x86_64>) == X64_PROGRAM_HEADER_SIZE);
 
 struct ELFFile {
+  template <Format Fmt>
+  struct NamedSectionHeaders {
+    using DataType = std::vector<std::pair<std::string, SectionHeader<Fmt>>>;
+
+    explicit NamedSectionHeaders(DataType t_section_headers) : section_headers_(std::move(t_section_headers)) {}
+
+    [[nodiscard]] auto get_loadable_count() const { return ranges::count_if(this->section_headers_, should_load); }
+
+    [[nodiscard]] auto get_loadable_sections() const {
+      using ranges::to;
+      using ranges::views::filter;
+      return this->section_headers_ | filter(should_load) | to<std::vector>;
+    }
+
+   private:
+    static constexpr auto should_load = [](auto const& t_sh) {
+      auto const& [name, section] = t_sh;
+      return section.is_loadable() and section.have_content();
+    };
+
+    DataType section_headers_;
+  };
+
   template <Format Fmt>
   class Content {
     static constexpr auto should_load = [](auto const& t_sh) {

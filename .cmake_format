@@ -193,33 +193,19 @@ with section("parse"):
 
   # Specify structure for custom cmake functions
   additional_commands = {
-    u'add_profiler_report': {
+    u'conan_cmake_configure': {
       u'kwargs': {
-        u'ADD_PROF_DIR_MACRO': u'*',
-        u'DEPEND': u'*',
-        u'DISPLAY': u'*',
-        u'EXE_TARGET': u'*',
-        u'OUTPUT_FORMAT': u'*',
-        u'EXTRA_OPTIONS': u'*',
-        u'CPUPROFILE_FREQUENCY': u'*',
-        u'EXE_COMMAND': u'*'
+        u'REQUIRES': u'*',
+        u'GENERATORS': u'*'
       }
     },
-    u'add_gcov_report': {
+    u'conan_cmake_install': {
       u'kwargs': {
-        u'REPORT_NAME': u'*',
-        u'GCOV_EXCLUDE': u'*',
-        u'EXCLUDE_SRC': u'*',
-        u'EXTRA_OPTIONS': u'*',
-        u'TARGET_DEPEND': u'*'
-      }
-    },
-    u'catkin_package': {
-      u'kwargs': {
-        u'INCLUDE_DIRS': u'*',
-        u'LIBRARIES': u'*',
-        u'CATKIN_DEPENDS': u'*',
-        u'DEPENDS': u'*'
+        u'PATH_OR_REFERENCE': u'*',
+        u'BUILD': u'*',
+        u'OPTIONS': u'*',
+        u'SETTINGS': u'*',
+        u'ENV': u'*'
       }
     }
   }

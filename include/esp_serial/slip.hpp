@@ -23,12 +23,6 @@ class ESPSLIP {
   static constexpr std::uint8_t REQUEST_DIRECTION  = 0x0;
   static constexpr std::uint8_t RESPONSE_DIRECTION = 0x01;
 
-  static constexpr std::uint8_t SLIP_END     = 0xC0;
-  static constexpr std::uint8_t SLIP_ESC     = 0xDB;
-  static constexpr std::uint8_t SLIP_ESC_END = 0xDC;
-  static constexpr std::uint8_t SLIP_ESC_ESC = 0xDD;
-  static constexpr auto is_slip_end = [](auto const t_in) { return static_cast<std::uint8_t>(t_in) == SLIP_END; };
-
   static constexpr auto get_err_string = [](std::uint32_t t_err) {
     constexpr auto RCV_MSG_INVALID    = 0x5;
     constexpr auto FAILED_TO_ACT      = 0x6;
@@ -62,23 +56,39 @@ class ESPSLIP {
   bool unpaired_start_ = false;
 
  public:
+  static constexpr std::uint8_t SLIP_END     = 0xC0;
+  static constexpr std::uint8_t SLIP_ESC     = 0xDB;
+  static constexpr std::uint8_t SLIP_ESC_END = 0xDC;
+  static constexpr std::uint8_t SLIP_ESC_ESC = 0xDD;
+  static constexpr auto is_slip_end = [](auto const t_in) { return static_cast<std::uint8_t>(t_in) == SLIP_END; };
+
   struct Response {
-    std::uint8_t directions_ = RESPONSE_DIRECTION;  // 0x01
-    std::uint8_t command_;                          // request command
-    std::uint16_t size_;                            // data field size, at least 2 or 4 byte
-    std::uint32_t value_;                           // read_reg command result
-    std::vector<std::uint8_t> data_;                //
+    std::uint8_t directions_ = RESPONSE_DIRECTION; /*!< direction, must be 0x01 (RESPONSE_DIRECTION) */
+    std::uint8_t command_;                         /*!< request command */
+    std::uint16_t size_;                           /*!< data field size, at least 2 or 4 byte */
+    std::uint32_t value_;                          /*!< read_reg command result */
+    std::vector<std::uint8_t> data_;               //
   };
 
   using Result = Response;
 
+  /**
+   * @brief This function decodes slip packet
+   *
+   * @param t_buffer  Buffer iterator of data sent by esp chips
+   * @param t_byte_read Size of buffer
+   * @return Result
+   *
+   * @note This function assumes input data to be slip compliant since this will be called only if complete_condition is
+   *       satisfied
+   */
   [[nodiscard]] Result decode_packet(auto t_buffer, std::size_t t_byte_read) const {
     auto const vec = [=]() {
-      auto packet_start = boost::next(std::find_if(t_buffer, boost::next(t_buffer, t_byte_read), is_slip_end));
+      auto const buffer_end = boost::next(t_buffer, t_byte_read);
+      auto packet_start     = boost::next(std::find_if(t_buffer, buffer_end, is_slip_end));
       std::vector<std::uint32_t> ret;  // prevent std::uint8_t overflow during arithmetic
       ret.reserve(t_byte_read);
-      for (std::uint8_t prev = 0, curr = static_cast<std::uint8_t>(*packet_start);
-           packet_start != boost::next(t_buffer, t_byte_read);
+      for (std::uint8_t prev = 0, curr = static_cast<std::uint8_t>(*packet_start); packet_start != buffer_end;
            prev = curr, curr = static_cast<std::uint8_t>(*++packet_start)) {
         if (curr == SLIP_ESC) {
           continue;
@@ -100,7 +110,7 @@ class ESPSLIP {
     auto const high_byte = vec[3];
     auto const data_size = high_byte << 8 | low_byte;
 
-    spdlog::debug("Raw bytes (len = {}):\n", vec.size(), fmt::join(vec, " "));
+    spdlog::debug("Raw bytes (len = {}):\n", vec.size());
     print_byte_stream(vec.begin(), vec.end());
 
     assert(vec.front() == RESPONSE_DIRECTION);
@@ -127,7 +137,7 @@ class ESPSLIP {
 
     auto const size_of_data = static_cast<std::uint16_t>(std::size(data_content));
     auto packet             = std::vector<std::uint8_t>{SLIP_END, REQUEST_DIRECTION, t_cmd.COMMAND_BYTE};
-    auto insert_byte        = [&packet](auto const t_byte) mutable {
+    auto insert_byte        = [&packet](auto const t_byte) {
       switch (t_byte) {
         case SLIP_END:
           packet.push_back(SLIP_ESC);
@@ -148,16 +158,16 @@ class ESPSLIP {
     };
 
     packet.reserve(size_of_data + SLIP_HEADER_SIZE + 2);  // 2: initial END and end END
-    ranges::for_each(std::bit_cast<std::array<std::uint8_t, 2>>(size_of_data), insert_byte);
+    ranges::for_each(std::bit_cast<std::array<std::uint8_t, sizeof(size_of_data)>>(size_of_data), insert_byte);
 
     std::uint32_t const check_sum = [&]() {
       if constexpr (requires { t_cmd.check_sum(); }) {
         return t_cmd.check_sum();
       }
 
-      return std::uint8_t{0};
+      return std::uint8_t{};
     }();
-    ranges::for_each(std::bit_cast<std::array<std::uint8_t, 4>>(check_sum), insert_byte);
+    ranges::for_each(std::bit_cast<std::array<std::uint8_t, sizeof(check_sum)>>(check_sum), insert_byte);
     ranges::for_each(data_content, insert_byte);
 
     packet.push_back(SLIP_END);

@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  linux:
+    strategy:
+      fail-fast: false
+      matrix:
+        # clang:14 is omitted currently since it doesn't have the same support as gcc:12
+        # also, range-v3 release can't be build with clang libc++, see https://github.com/ericniebler/range-v3/issues/1666
+        image: ["gcc:12"] 
+        build_type: [Debug, Release]
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/${{ github.actor }}/${{ matrix.image }}
+    steps:
+      - uses: actions/checkout@v2
+      - if: matrix.image == 'clang:14'
+        name: additional setup to build boost
+        # b2 needs the compiler to have its "usual name" and is in the PATH
+        # see https://www.boost.org/doc/libs/1_78_0/tools/build/doc/html/index.html#bbv2.overview.configuration
+        run: |
+          ln -s $(which $CC) /usr/bin/clang && ln -s $(which $CXX) /usr/bin/clang++
+          apt-get update && apt-get install --no-install-recommends -y make
+      - name: install git for Catch2 unit test framework
+        run: apt-get install --no-install-recommends -y git
+      - name: config and build esplink
+        run: "cmake -S $GITHUB_WORKSPACE --preset=test -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DCMAKE_LINKER=/usr/bin/mold -DCMAKE_C_COMPILER=$(which $CC) && 
+             cmake --build $GITHUB_WORKSPACE/build --target all --config test"
+      - name: run test
+        run: ctest --test-dir $GITHUB_WORKSPACE/build/test --output-on-failure

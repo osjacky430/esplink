@@ -58,21 +58,15 @@ struct WRITE_REG {
 };
 
 template <std::uint32_t Addr>
-struct READ_REG {
+class READ_REG {
+  static constexpr std::array<std::uint8_t, sizeof(Addr)> BYTE_ARRAY =
+    std::bit_cast<std::array<std::uint8_t, sizeof(Addr)>>(Addr);
+
+ public:
   static constexpr std::string_view NAME     = "READ_REG";
   static constexpr std::uint8_t COMMAND_BYTE = 0x0A;
 
-  constexpr auto operator()() const noexcept {
-    constexpr auto ret_val = []() {
-      std::array<std::uint8_t, 1 * sizeof(std::uint32_t)> v{};
-      constexpr auto addr_arr = word_to_byte_array(Addr);
-
-      std::copy(addr_arr.begin(), addr_arr.end(), v.begin());
-      return v;
-    }();
-
-    return ret_val;
-  }
+  constexpr auto operator()() const noexcept { return BYTE_ARRAY; }
 };
 
 struct SPI_ATTACH {
@@ -111,10 +105,10 @@ struct SPI_SET_PARAMS {
 };
 
 struct FLASH_BEGIN {
-  std::uint32_t erase_size_;
-  std::uint32_t packet_count_;
-  std::uint32_t data_size_per_packet_;
-  std::uint32_t flash_offset_;
+  std::uint32_t erase_size_{};
+  std::uint32_t packet_count_{};
+  std::uint32_t data_size_per_packet_{};
+  std::uint32_t flash_offset_{};
   std::uint32_t rom_encrypted_write_ = 0;  // ??
 
   static constexpr std::string_view NAME     = "FLASH_BEGIN";

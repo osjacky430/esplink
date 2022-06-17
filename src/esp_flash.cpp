@@ -1,38 +1,23 @@
+#include "esp_common/chip.hpp"
+#include "esp_serial/boot_cmd.hpp"
+#include "esp_serial/serial_port.hpp"
+#include "esp_serial/slip.hpp"
 #include <boost/program_options.hpp>
-
+#include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
 
-#include "esp_flash/boot_cmd.hpp"
-#include "esp_flash/chip.hpp"
-#include "esp_flash/serial_port.hpp"
-#include "esp_flash/slip.hpp"
-
 using namespace std::chrono_literals;
 
-enum class CommandLineOption { Flash, Info, Monitor, NoOpt };
-
-std::istream& operator>>(std::istream& t_in, CommandLineOption& t_opt) {
-  std::string token;
-  t_in >> token;
-  if (token == "flash") {
-    t_opt = CommandLineOption::Flash;
-  } else if (token == "info") {
-    t_opt = CommandLineOption::Info;
-  } else if (token == "monitor" || token == "mon") {
-    t_opt = CommandLineOption::Monitor;
-  } else {
-    t_opt = CommandLineOption::NoOpt;
-    t_in.setstate(std::ios_base::failbit);
-  }
-
-  return t_in;
-}
+using FlashFn = void (*)(std::filesystem::path const&, std::string_view const, std::uint32_t const,
+                         std::uint32_t const);
 
 template <esplink::ImageHeaderChipID ChipID>
-void do_flash(std::filesystem::path const& t_file, std::string_view const t_port, std::uint32_t const t_baud,
-              std::uint32_t const t_flash_offset) {
+void flash(std::filesystem::path const& t_file, std::string_view const t_port, std::uint32_t const t_baud,
+           std::uint32_t const t_flash_offset) {
+  using namespace std::chrono_literals;
+
   if (t_file.extension() == "elf") {
     throw std::invalid_argument("elf file is not supported, currently support only .bin file");
   }
@@ -81,13 +66,10 @@ void do_flash(std::filesystem::path const& t_file, std::string_view const t_port
   loader.transceive(esplink::command::FLASH_END<esplink::command::FlashEndOption::Reboot>());
 }
 
-using FlashFn = void (*)(std::filesystem::path const&, std::string_view const, std::uint32_t const,
-                         std::uint32_t const);
-
 static auto& get_flash_fn() {
   static std::unordered_map<std::string_view, FlashFn> const FLASH_FN_MAP = []() {
     std::unordered_map<std::string_view, FlashFn> ret_val;
-    ret_val["esp32c3"] = do_flash<esplink::ImageHeaderChipID::ESP32C3>;
+    ret_val["ESP32C3"] = flash<esplink::ImageHeaderChipID::ESP32C3>;
     return ret_val;
   }();
 
@@ -103,13 +85,7 @@ int main(int argc, const char** argv) {
     ("offset", value<std::string>(), "Flash offset")                                //
     ("flash-param", value<std::string>(),
      "Flash parameter, including SPI flash mode, SPI flash speed, and flash chip size")  //
-    ("chip", value<std::string>()->default_value("esp32c3"), "Chip type, currently support only esp32c3");
-
-  CommandLineOption opt = CommandLineOption::NoOpt;
-  options_description hidden_command_opt("All possible command");
-  hidden_command_opt.add_options()                                //
-    ("command", value<CommandLineOption>(&opt), "command to do")  //
-    ("file", value<std::string>(), "input binary file");
+    ("chip", value<std::string>()->default_value("ESP32C3"), "Chip type, currently support only ESP32C3");
 
   options_description visible_options("All options");
   visible_options.add(flash_options)
@@ -118,10 +94,10 @@ int main(int argc, const char** argv) {
     ("verbose", "Show debug message during execution");
 
   positional_options_description pd;
-  pd.add("command", 1).add("file", 1);
+  pd.add("file", 1);
 
   options_description all("Allowed options");
-  all.add(hidden_command_opt).add(visible_options);
+  all.add(visible_options);
 
   variables_map vm;
   store(command_line_parser(argc, argv).options(all).positional(pd).run(), vm);
@@ -132,8 +108,8 @@ int main(int argc, const char** argv) {
     return EXIT_SUCCESS;
   }
 
-  if (vm.count("command") == 0 or opt == CommandLineOption::NoOpt) {
-    std::cerr << "Must specifiy a command!\n";
+  if (vm.count("file") == 0) {
+    std::cerr << "Must specifiy a file!\n";
     return EXIT_FAILURE;
   }
 
@@ -141,27 +117,14 @@ int main(int argc, const char** argv) {
     spdlog::set_level(spdlog::level::debug);
   }
 
-  switch (opt) {
-    case CommandLineOption::Flash: {
-      std::stringstream ss;
-      ss << std::hex << vm["offset"].as<std::string>();
-      std::uint32_t offset = 0;
-      ss >> offset;
-      auto const baud_rate  = static_cast<std::uint32_t>(vm["baud"].as<int>());
-      auto const& flash_map = get_flash_fn();
-      auto const& flash_fn  = flash_map.at(vm["chip"].as<std::string>());
-      flash_fn(vm["file"].as<std::string>(), vm["port"].as<std::string>(), baud_rate, offset);
-      break;
-    }
-    case CommandLineOption::Info:
-      [[fallthrough]];
-    case CommandLineOption::Monitor:
-      [[fallthrough]];
-    case CommandLineOption::NoOpt:
-      [[fallthrough]];
-    default:
-      break;
-  }
+  std::stringstream ss;
+  ss << std::hex << vm["offset"].as<std::string>();
+  std::uint32_t offset = 0;
+  ss >> offset;
+  auto const baud_rate  = static_cast<std::uint32_t>(vm["baud"].as<int>());
+  auto const& flash_map = get_flash_fn();
+  auto const& flash_fn  = flash_map.at(vm["chip"].as<std::string>());
+  flash_fn(vm["file"].as<std::string>(), vm["port"].as<std::string>(), baud_rate, offset);
 
   return EXIT_SUCCESS;
 }

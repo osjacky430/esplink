@@ -8,6 +8,7 @@
   "configurePresets": [
     {
       "name": "default",
+      "hidden": true,
       "binaryDir": "build",
       "generator": "Ninja"
     },
@@ -15,8 +16,20 @@
       "name": "test",
       "inherits": "default",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug",
         "ENABLE_TESTING": "TRUE"
+      }
+    },
+    {
+      "name": "ci-osx-m1-custom-compiler",
+      "inherits": "default",
+      "description": "osx m1 continuous integration setup with compiler installed via homebrew",
+      "environment": {
+        "PATH": "/opt/homebrew/bin:$penv{PATH}"
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
       }
     }
   ],

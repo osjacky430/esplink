@@ -8,7 +8,6 @@
 #include <fmt/ranges.h>
 #include <fstream>
 #include <iostream>
-#include <limits>
 #include <numeric>
 #include <range/v3/algorithm/find_if.hpp>
 #include <range/v3/algorithm/sort.hpp>
@@ -123,7 +122,7 @@ void mk_bin_from_elf(std::string_view t_file, std::string_view t_output_name,
     check_sum = std::accumulate(buffer.begin(), buffer.end(), check_sum, std::bit_xor{});
     std::fill_n(std::ostreambuf_iterator<char>(output_file_handle), padded_length - section.size_, '\0');
   };
-  auto const img_header_byte_stream = std::bit_cast<std::array<char, sizeof(esplink::ImageHeader)>>(img_header);
+  auto const img_header_byte_stream = std::bit_cast<std::array<char, sizeof(img_header)>>(img_header);
   output_file_handle.write(img_header_byte_stream.data(), img_header_byte_stream.size());
 
   ranges::for_each(section_headers, write_loadable_to_bin);
@@ -136,26 +135,30 @@ void mk_bin_from_elf(std::string_view t_file, std::string_view t_output_name,
   output_file_handle.write(std::bit_cast<std::array<char, 1>>(check_sum).data(), 1);
 }
 
-std::istream& operator>>(std::istream& t_in, esplink::ImageHeaderChipID& t_opt) {
+namespace esplink {
+
+std::istream& operator>>(std::istream& t_in, ImageHeaderChipID& t_opt) {
   std::string token;
   t_in >> token;
   if (token == "ESP32") {
-    t_opt = esplink::ImageHeaderChipID::ESP32;
+    t_opt = ImageHeaderChipID::ESP32;
   } else if (token == "ESP32S2") {
-    t_opt = esplink::ImageHeaderChipID::ESP32S2;
+    t_opt = ImageHeaderChipID::ESP32S2;
   } else if (token == "ESP32C3") {
-    t_opt = esplink::ImageHeaderChipID::ESP32C3;
+    t_opt = ImageHeaderChipID::ESP32C3;
   } else if (token == "ESP32S3") {
-    t_opt = esplink::ImageHeaderChipID::ESP32S3;
+    t_opt = ImageHeaderChipID::ESP32S3;
   } else if (token == "ESP32C2") {
-    t_opt = esplink::ImageHeaderChipID::ESP32C2;
+    t_opt = ImageHeaderChipID::ESP32C2;
   } else {
-    t_opt = esplink::ImageHeaderChipID::INVALID;
+    t_opt = ImageHeaderChipID::INVALID;
     t_in.setstate(std::ios_base::failbit);
   }
 
   return t_in;
 }
+
+}  // namespace esplink
 
 int main(int argc, char** argv) {
   try {
