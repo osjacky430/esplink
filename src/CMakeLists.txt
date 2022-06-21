@@ -12,6 +12,3 @@ add_executable(esp-mkbin esp_mkbin.cpp)
 target_link_libraries(esp-mkbin PRIVATE Boost::program_options esp_link)
 
 install(TARGETS esp-mkbin)
-
-add_executable(esp-monitor esp_monitor.cpp)
-target_link_libraries(esp-monitor PRIVATE Boost::program_options esp_link)
